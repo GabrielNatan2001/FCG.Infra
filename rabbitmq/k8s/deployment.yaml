@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-rabbitmq
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: fcg-rabbitmq
+
+  template:
+    metadata:
+      labels:
+        app: fcg-rabbitmq
+
+    spec:
+      containers:
+        - name: fcg-rabbitmq
+
+          image: rabbitmq:4-management
+
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
+
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASS

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-postgres
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: fcg-postgres
+
+  template:
+    metadata:
+      labels:
+        app: fcg-postgres
+
+    spec:
+      containers:
+        - name: fcg-postgres
+          image: postgres:17
+
+          ports:
+            - containerPort: 5432
+
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-postgres-secret
+                  key: POSTGRES_PASSWORD
+
+          volumeMounts:
+            - name: fcg-postgres-data
+              mountPath: /var/lib/postgresql/data
+
+            - name: fcg-postgres-init-script
+              mountPath: /docker-entrypoint-initdb.d
+
+      volumes:
+        - name: fcg-postgres-data
+          emptyDir: {}
+
+        - name: fcg-postgres-init-script
+          configMap:
+            name: fcg-postgres-init-script

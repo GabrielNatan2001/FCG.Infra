@@ -1,0 +1,107 @@
+# Configuração Manual do RabbitMQ
+
+## Pré-requisitos
+
+Acessar o pod/container do RabbitMQ:
+
+```bash
+kubectl exec -it <rabbitmq-pod> -- bash
+```
+
+ou
+
+```bash
+docker exec -it <rabbitmq-container> bash
+```
+
+## Criação das Exchanges
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.user.created-exchange --type direct --durable true
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.order.placed-exchange --type direct --durable true
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.payment.processed-exchange --type direct --durable true
+```
+
+## Criação das Filas
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare queue --name fcg.user.created-queue --durable true
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare queue --name fcg.order.placed-queue --durable true
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare queue --name fcg.payment.processed-queue --durable true
+```
+
+## Criação dos Bindings
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare binding --source fcg.user.created-exchange --destination-type queue --destination fcg.user.created-queue --routing-key fcg.user.created
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare binding --source fcg.order.placed-exchange --destination-type queue --destination fcg.order.placed-queue --routing-key fcg.order.placed
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin declare binding --source fcg.payment.processed-exchange --destination-type queue --destination fcg.payment.processed-queue --routing-key fcg.payment.processed
+```
+
+## Validação
+
+Listar exchanges:
+
+```bash
+rabbitmqadmin --username=admin --password=admin list exchanges
+```
+
+Listar filas:
+
+```bash
+rabbitmqadmin --username=admin --password=admin list queues
+```
+
+Listar bindings:
+
+```bash
+rabbitmqadmin --username=admin --password=admin list bindings
+```
+
+## Remoção (Opcional)
+
+### Remover Filas
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete queue --name fcg.user.created-queue
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete queue --name fcg.order.placed-queue
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete queue --name fcg.payment.processed-queue
+```
+
+### Remover Exchanges
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.user.created-exchange
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.order.placed-exchange
+```
+
+```bash
+rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.payment.processed-exchange
+```
