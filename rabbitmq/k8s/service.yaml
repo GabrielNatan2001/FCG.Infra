@@ -1,9 +1,10 @@
-apiVersion: v1
+﻿apiVersion: v1
 kind: Service
 metadata:
   name: fcg-rabbitmq
 
 spec:
+  type: NodePort
   selector:
     app: fcg-rabbitmq
 
@@ -11,7 +12,9 @@ spec:
     - name: amqp
       port: 5672
       targetPort: 5672
+      nodePort: 30672
 
     - name: management
       port: 15672
       targetPort: 15672
+      nodePort: 31672
