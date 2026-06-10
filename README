@@ -1,107 +1,195 @@
-# Configuração Manual do RabbitMQ
+# Kubernetes - Comandos Básicos
 
-## Pré-requisitos
-
-Acessar o pod/container do RabbitMQ:
+## Verificar o cluster
 
 ```bash
-kubectl exec -it <rabbitmq-pod> -- bash
+kubectl cluster-info
+```
+
+```bash
+kubectl get nodes
+```
+
+## Aplicar recursos
+
+```bash
+kubectl apply -f deployment.yaml
+```
+
+```bash
+kubectl apply -f service.yaml
+```
+
+```bash
+kubectl apply -f .
+```
+
+## Listar recursos
+
+### Pods
+
+```bash
+kubectl get pods
+```
+
+```bash
+kubectl get pods -A
+```
+
+### Deployments
+
+```bash
+kubectl get deployments
+```
+
+### Services
+
+```bash
+kubectl get services
+```
+
+### Namespaces
+
+```bash
+kubectl get namespaces
+```
+
+## Detalhes dos recursos
+
+```bash
+kubectl describe pod <nome-pod>
+```
+
+```bash
+kubectl describe deployment <nome-deployment>
+```
+
+```bash
+kubectl describe service <nome-service>
+```
+
+## Logs
+
+```bash
+kubectl logs <nome-pod>
+```
+
+Acompanhar em tempo real:
+
+```bash
+kubectl logs -f <nome-pod>
+```
+
+Container específico:
+
+```bash
+kubectl logs <nome-pod> -c <nome-container>
+```
+
+## Acessar um container
+
+```bash
+kubectl exec -it <nome-pod> -- sh
 ```
 
 ou
 
 ```bash
-docker exec -it <rabbitmq-container> bash
+kubectl exec -it <nome-pod> -- bash
 ```
 
-## Criação das Exchanges
+## Escalar deployment
 
 ```bash
-rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.user.created-exchange --type direct --durable true
+kubectl scale deployment <nome-deployment> --replicas=3
 ```
 
+## Reiniciar deployment
+
 ```bash
-rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.order.placed-exchange --type direct --durable true
+kubectl rollout restart deployment <nome-deployment>
 ```
 
+## Verificar rollout
+
 ```bash
-rabbitmqadmin --username=admin --password=admin declare exchange --name fcg.payment.processed-exchange --type direct --durable true
+kubectl rollout status deployment <nome-deployment>
 ```
 
-## Criação das Filas
+## Histórico de versões
 
 ```bash
-rabbitmqadmin --username=admin --password=admin declare queue --name fcg.user.created-queue --durable true
+kubectl rollout history deployment <nome-deployment>
 ```
 
+## Rollback
+
 ```bash
-rabbitmqadmin --username=admin --password=admin declare queue --name fcg.order.placed-queue --durable true
+kubectl rollout undo deployment <nome-deployment>
 ```
 
+## Expor deployment
+
 ```bash
-rabbitmqadmin --username=admin --password=admin declare queue --name fcg.payment.processed-queue --durable true
+kubectl expose deployment <nome-deployment> --type=LoadBalancer --port=80 --target-port=8080
 ```
 
-## Criação dos Bindings
+## Port Forward
 
 ```bash
-rabbitmqadmin --username=admin --password=admin declare binding --source fcg.user.created-exchange --destination-type queue --destination fcg.user.created-queue --routing-key fcg.user.created
+kubectl port-forward service/<nome-service> 8080:80
 ```
 
+ou
+
 ```bash
-rabbitmqadmin --username=admin --password=admin declare binding --source fcg.order.placed-exchange --destination-type queue --destination fcg.order.placed-queue --routing-key fcg.order.placed
+kubectl port-forward pod/<nome-pod> 8080:8080
 ```
 
-```bash
-rabbitmqadmin --username=admin --password=admin declare binding --source fcg.payment.processed-exchange --destination-type queue --destination fcg.payment.processed-queue --routing-key fcg.payment.processed
-```
-
-## Validação
-
-Listar exchanges:
+## Remover recursos
 
 ```bash
-rabbitmqadmin --username=admin --password=admin list exchanges
-```
-
-Listar filas:
-
-```bash
-rabbitmqadmin --username=admin --password=admin list queues
-```
-
-Listar bindings:
-
-```bash
-rabbitmqadmin --username=admin --password=admin list bindings
-```
-
-## Remoção (Opcional)
-
-### Remover Filas
-
-```bash
-rabbitmqadmin --username=admin --password=admin delete queue --name fcg.user.created-queue
+kubectl delete -f deployment.yaml
 ```
 
 ```bash
-rabbitmqadmin --username=admin --password=admin delete queue --name fcg.order.placed-queue
+kubectl delete deployment <nome-deployment>
 ```
 
 ```bash
-rabbitmqadmin --username=admin --password=admin delete queue --name fcg.payment.processed-queue
-```
-
-### Remover Exchanges
-
-```bash
-rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.user.created-exchange
+kubectl delete service <nome-service>
 ```
 
 ```bash
-rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.order.placed-exchange
+kubectl delete pod <nome-pod>
+```
+
+## Monitoramento
+
+```bash
+kubectl top pods
 ```
 
 ```bash
-rabbitmqadmin --username=admin --password=admin delete exchange --name fcg.payment.processed-exchange
+kubectl top nodes
+```
+
+## Contextos
+
+Ver contextos disponíveis:
+
+```bash
+kubectl config get-contexts
+```
+
+Ver contexto atual:
+
+```bash
+kubectl config current-context
+```
+
+Trocar contexto:
+
+```bash
+kubectl config use-context <nome-contexto>
 ```
