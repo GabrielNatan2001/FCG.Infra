@@ -1,0 +1,129 @@
+﻿name: fcg
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: fcg-postgres
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - fcg-postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: fcg-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - fcg-rabbitmq-data:/var/lib/rabbitmq
+
+  notifications-worker:
+    image: gabrielnatan2001/fcg-worker-notifications:latest
+    pull_policy: always
+    container_name: fcg-notifications-worker
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
+      MessageBusConfigs__RetryCount: "5"
+      Workers__UserCreated__Ativo: "true"
+      Workers__UserCreated__Exchange: fcg.user.created
+      Workers__UserCreated__RoutingKey: notifications.user-created
+      Workers__PaymentProcessed__Ativo: "true"
+      Workers__PaymentProcessed__Exchange: fcg.payment.processed
+      Workers__PaymentProcessed__RoutingKey: notifications.payment-processed
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+
+  payments-worker:
+    image: gabrielnatan2001/fcg-worker-payments:latest
+    pull_policy: always
+    container_name: fcg-payments-worker
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_payments;Username=postgres;Password=postgres
+      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
+      MessageBusConfigs__RetryCount: "5"
+      Workers__OrderPlaced__Ativo: "true"
+      Workers__OrderPlaced__Exchange: fcg.order.placed
+      Workers__OrderPlaced__RoutingKey: payments.order-placed
+      Publishers__PaymentProcessed__Exchange: fcg.payment.processed
+      Publishers__PaymentProcessed__CatalogRoutingKey: catalog.payment-processed
+      Publishers__PaymentProcessed__NotificationsRoutingKey: notifications.payment-processed
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  catalog-worker:
+    image: gabrielnatan2001/fcg-worker-catalog:latest
+    pull_policy: always
+    container_name: fcg-catalog-worker
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_catalog;Username=postgres;Password=postgres
+      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
+      MessageBusConfigs__RetryCount: "5"
+      Workers__PaymentProcessed__Ativo: "true"
+      Workers__PaymentProcessed__Exchange: fcg.payment.processed
+      Workers__PaymentProcessed__RoutingKey: catalog.payment-processed
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  catalog-api:
+    image: gabrielnatan2001/fcg-api-catalog:latest
+    pull_policy: always
+    container_name: fcg-catalog-api
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_catalog;Username=postgres;Password=postgres
+      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
+      MessageBusConfigs__RetryCount: "5"
+      Publishers__OrderPlaced__Exchange: fcg.order.placed
+      Publishers__OrderPlaced__RoutingKey: payments.order-placed
+      Jwt__Key: "rN8#kL2vQ9@xT5mP1!zC7$$dH4^bW6&yU"
+      Jwt__Issuer: FCG.Users.API
+      Jwt__Audience: FCG.Client
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  users-api:
+    image: gabrielnatan2001/fcg-api-users:latest
+    pull_policy: always
+    container_name: fcg-users-api
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_users;Username=postgres;Password=postgres
+      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
+      MessageBusConfigs__RetryCount: "5"
+      Publishers__UserCreated__Exchange: fcg.user.created
+      Publishers__UserCreated__RoutingKey: notifications.user-created
+      Jwt__Key: "rN8#kL2vQ9@xT5mP1!zC7$$dH4^bW6&yU"
+      Jwt__Issuer: FCG.Users.API
+      Jwt__Audience: FCG.Client
+    depends_on:
+      - postgres
+      - rabbitmq
+      - notifications-worker
+    restart: unless-stopped
+
+volumes:
+  fcg-postgres-data:
+  fcg-rabbitmq-data:
