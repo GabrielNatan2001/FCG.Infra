@@ -44,7 +44,8 @@ spec:
 
       volumes:
         - name: fcg-postgres-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: fcg-postgres-pvc
 
         - name: fcg-postgres-init-script
           configMap:
