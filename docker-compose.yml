@@ -25,23 +25,70 @@ services:
       RABBITMQ_DEFAULT_PASS: admin
     volumes:
       - fcg-rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
 
-  notifications-worker:
-    image: gabrielnatan2001/fcg-worker-notifications:latest
-    pull_policy: always
-    container_name: fcg-notifications-worker
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
-      MessageBusConfigs__RetryCount: "5"
-      Workers__UserCreated__Ativo: "true"
-      Workers__UserCreated__Exchange: fcg.user.created
-      Workers__UserCreated__RoutingKey: notifications.user-created
-      Workers__PaymentProcessed__Ativo: "true"
-      Workers__PaymentProcessed__Exchange: fcg.payment.processed
-      Workers__PaymentProcessed__RoutingKey: notifications.payment-processed
+  mongodb:
+    image: mongo:7
+    container_name: fcg-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - fcg-mongodb-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: fcg-redis
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: fcg-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
-      - rabbitmq
+      - users-api
+      - catalog-api
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: fcg-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  kong:
+    image: kong:3.8
+    container_name: fcg-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./kong/kong.yml:/kong/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    depends_on:
+      - users-api
+      - catalog-api
     restart: unless-stopped
 
   payments-worker:
@@ -85,11 +132,15 @@ services:
     image: gabrielnatan2001/fcg-api-catalog:latest
     pull_policy: always
     container_name: fcg-catalog-api
-    ports:
-      - "5002:8080"
+    expose:
+      - "8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_catalog;Username=postgres;Password=postgres
+      ConnectionStrings__MongoDB: mongodb://mongodb:27017
+      ConnectionStrings__Redis: redis:6379
+      MongoDB__Database: fcg_catalog
+      Cache__JogosTtlSeconds: "60"
       MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
       MessageBusConfigs__RetryCount: "5"
       Publishers__OrderPlaced__Exchange: fcg.order.placed
@@ -100,14 +151,16 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+      - mongodb
+      - redis
     restart: unless-stopped
 
   users-api:
     image: gabrielnatan2001/fcg-api-users:latest
     pull_policy: always
     container_name: fcg-users-api
-    ports:
-      - "5001:8080"
+    expose:
+      - "8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_users;Username=postgres;Password=postgres
@@ -121,9 +174,9 @@ services:
     depends_on:
       - postgres
       - rabbitmq
-      - notifications-worker
     restart: unless-stopped
 
 volumes:
   fcg-postgres-data:
   fcg-rabbitmq-data:
+  fcg-mongodb-data:

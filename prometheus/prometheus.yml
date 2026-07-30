@@ -1,0 +1,20 @@
+﻿global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: fcg-users-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - users-api:8080
+        labels:
+          service: users-api
+
+  - job_name: fcg-catalog-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - catalog-api:8080
+        labels:
+          service: catalog-api

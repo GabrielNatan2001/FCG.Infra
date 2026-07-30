@@ -1,0 +1,25 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcg-redis
+  template:
+    metadata:
+      labels:
+        app: fcg-redis
+    spec:
+      containers:
+        - name: fcg-redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          args:
+            - redis-server
+            - --save
+            - ""
+            - --appendonly
+            - "no"

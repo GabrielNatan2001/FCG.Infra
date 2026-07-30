@@ -1,0 +1,45 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcg-kong
+  template:
+    metadata:
+      labels:
+        app: fcg-kong
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.8
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /kong/kong.yml
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+          ports:
+            - containerPort: 8000
+            - containerPort: 8001
+          volumeMounts:
+            - name: kong-config
+              mountPath: /kong
+              readOnly: true
+      volumes:
+        - name: kong-config
+          configMap:
+            name: fcg-kong-config

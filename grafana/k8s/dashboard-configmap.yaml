@@ -1,0 +1,53 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fcg-grafana-dashboard-fcg-apis
+data:
+  fcg-apis.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+          "id": 1,
+          "targets": [{ "expr": "sum(rate(http_requests_received_total[1m])) by (job)", "legendFormat": "{{job}}" }],
+          "title": "Request rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+          "id": 2,
+          "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))", "legendFormat": "p95 {{job}}" }],
+          "title": "Latency p95",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+          "id": 3,
+          "targets": [{ "expr": "sum(rate(http_requests_received_total{code=~\"5..\"}[1m])) by (job)", "legendFormat": "5xx {{job}}" }],
+          "title": "Error rate (5xx)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "id": 4,
+          "targets": [{ "expr": "sum(rate(http_requests_received_total[1m])) by (code, job)", "legendFormat": "{{job}} {{code}}" }],
+          "title": "Requests by status code",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["fcg", "fase3"],
+      "time": { "from": "now-15m", "to": "now" },
+      "title": "FCG APIs - Observability",
+      "uid": "fcg-apis",
+      "version": 1
+    }
