@@ -1,204 +1,175 @@
 ﻿# FCG.Infra
 
-Repositório de **orquestração** da plataforma FCG. Centraliza a infraestrutura compartilhada (PostgreSQL, RabbitMQ) e as instruções para executar todos os microsserviços com **Docker Compose** ou **Kubernetes**.
+Repositório de **orquestração** da plataforma FCG (Tech Challenge — Fase 3). Centraliza infraestrutura compartilhada e o guia para subir o ambiente com **Docker Compose** ou **Kubernetes**.
+
+## Stack da Fase 3
+
+| Capacidade | Escolha |
+|---|---|
+| API Gateway | **Kong** (DB-less) — ponto de entrada único + validação JWT no catálogo |
+| Observabilidade | **Opção A** — Prometheus + Grafana |
+| NoSQL | **MongoDB** — avaliações de jogos no Catalog |
+| Cache | **Redis** — listagens de jogos |
+| Serverless | **Azure Functions** — projeto em [`FCG.Notifications/src/FCG.Notifications.Function`](../FCG.Notifications/src/FCG.Notifications.Function) |
+| Relacional | PostgreSQL |
+| Mensageria | RabbitMQ |
 
 ## Microsserviços
 
-| Repositório | Finalidade | Porta (Docker) |
-|---|---|---|
-| [FCG.Users](../FCG.Users) | Cadastro e autenticação JWT | `5001` |
-| [FCG.Catalog](../FCG.Catalog) | Catálogo, biblioteca e compras | `5002` |
-| [FCG.Payments](../FCG.Payments) | Processamento assíncrono de pagamentos | — |
-| [FCG.Notifications](../FCG.Notifications) | Simulação de e-mails via log | — |
+| Repositório | Finalidade |
+|---|---|
+| [FCG.Users](../FCG.Users) | Cadastro e autenticação JWT |
+| [FCG.Catalog](../FCG.Catalog) | Catálogo, biblioteca, compras, avaliações (Mongo) + cache Redis |
+| [FCG.Payments](../FCG.Payments) | Processamento assíncrono de pagamentos |
+| [FCG.Notifications](../FCG.Notifications) | Notificações serverless (Azure Functions); contém também o worker legado da Fase 2 |
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
-    Users[FCG.Users API] -->|UserCreatedEvent| RMQ[(RabbitMQ)]
-    Catalog[FCG.Catalog API] -->|OrderPlacedEvent| RMQ
-    RMQ --> Payments[FCG.Payments Worker]
-    Payments -->|PaymentProcessedEvent| RMQ
-    RMQ --> CatalogW[FCG.Catalog Worker]
-    RMQ --> Notif[FCG.Notifications Worker]
-    Users --> PG[(PostgreSQL)]
-    Catalog --> PG
-    CatalogW --> PG
-    Payments --> PG
+  Client[Client] --> Kong[Kong Gateway]
+  Kong -->|/users| Users[Users API]
+  Kong -->|/catalog + JWT| Catalog[Catalog API]
+  Users --> PG[(PostgreSQL)]
+  Catalog --> PG
+  Catalog --> Mongo[(MongoDB)]
+  Catalog --> Redis[(Redis)]
+  Users -->|events| RMQ[(RabbitMQ)]
+  Catalog -->|events| RMQ
+  RMQ --> Payments[Payments Worker]
+  RMQ --> CatalogW[Catalog Worker]
+  RMQ -->|trigger| AzFunc[Notifications Function]
+  Users --> Prom[Prometheus]
+  Catalog --> Prom
+  Prom --> Grafana[Grafana]
 ```
 
 ## Pré-requisitos
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose v2+)
-- Para Kubernetes: cluster local ([Minikube](https://minikube.sigs.k8s.io/), [Kind](https://kind.sigs.k8s.io/)) ou cloud com `kubectl` configurado
+- Para Kubernetes: Minikube/Kind ou cluster com `kubectl`
+- Para Notifications local: [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) v4
 
 ---
 
 ## Executar com Docker Compose
 
-### 1. Subir a stack
-
-Na raiz deste repositório:
-
 ```bash
+cd FCG.Infra
 docker compose up -d
 ```
 
-Para ver os logs:
+### Portas expostas
 
-```bash
-docker compose logs -f
-```
+| Serviço | URL |
+|---|---|
+| **Kong (entrada da API)** | http://localhost:8000 |
+| Kong Admin | http://localhost:8001 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 (`admin`/`admin`) |
+| RabbitMQ Management | http://localhost:15672 (`admin`/`admin`) |
+| PostgreSQL | `localhost:5435` |
+| MongoDB | `localhost:27017` |
+| Redis | `localhost:6379` |
 
-Para parar e remover os containers:
+> Users e Catalog **não** publicam portas no host — o acesso externo é só via Kong.
 
-```bash
-docker compose down
-```
+### Rotas do Gateway
 
-Para remover também os volumes (dados do Postgres e RabbitMQ):
-
-```bash
-docker compose down -v
-```
-
-### 2. Serviços e portas
-
-| Serviço | Imagem | Porta host |
+| Método | URL via Kong | Destino |
 |---|---|---|
-| PostgreSQL | `postgres:17` | `5435` |
-| RabbitMQ (AMQP) | `rabbitmq:4-management` | `5672` |
-| RabbitMQ (Management UI) | `rabbitmq:4-management` | `15672` |
-| Users API | `gabrielnatan2001/fcg-api-users:latest` | `5001` |
-| Catalog API | `gabrielnatan2001/fcg-api-catalog:latest` | `5002` |
-| Catalog Worker | `gabrielnatan2001/fcg-worker-catalog:latest` | — |
-| Payments Worker | `gabrielnatan2001/fcg-worker-payments:latest` | — |
-| Notifications Worker | `gabrielnatan2001/fcg-worker-notifications:latest` | — |
+| POST | `http://localhost:8000/users/api/Auth/login` | Users (público) |
+| POST | `http://localhost:8000/users/api/Usuario` | Users (público) |
+| * | `http://localhost:8000/catalog/api/...` | Catalog (**JWT obrigatório** no Kong) |
+| GET | `http://localhost:8000/users/health` | Users health |
+| GET | `http://localhost:8000/catalog/health` | Catalog health |
 
-### 3. Credenciais padrão
+Header nas rotas protegidas: `Authorization: Bearer <token>`
+
+### Credenciais
 
 | Serviço | Usuário | Senha |
 |---|---|---|
 | PostgreSQL | `postgres` | `postgres` |
 | RabbitMQ | `admin` | `admin` |
+| Grafana | `admin` | `admin` |
+| Admin seed (Users) | `admin@admin.com` | `Teste@123` |
 
-Bancos criados automaticamente no primeiro start: `fcg_users`, `fcg_catalog`, `fcg_payments` (script em `postgres/init/init.sql`).
+### Notifications (serverless)
 
-### 4. Endpoints
+O worker de notifications **não** sobe no Compose. Execute a Function localmente (ou no Azure) apontando para o RabbitMQ:
 
-| Recurso | URL |
-|---|---|
-| Users Swagger | http://localhost:5001/swagger |
-| Catalog Swagger | http://localhost:5002/swagger |
-| RabbitMQ UI | http://localhost:15672 |
-
-Usuário admin (seed do Users): `admin@admin.com` / `Teste@123`
-
-### 5. Mensageria
-
-Exchanges, filas e bindings são **criados automaticamente** pelos microsserviços ao publicar ou consumir mensagens. Não é necessária configuração manual no RabbitMQ.
+```bash
+cd ../FCG.Notifications/src/FCG.Notifications.Function
+cp local.settings.json.example local.settings.json
+# RabbitMQ: amqp://admin:admin@localhost:5672/
+func start
+```
 
 ---
 
 ## Deploy no Kubernetes
 
-Os manifests estão organizados por repositório. Aplique na ordem abaixo para garantir que a infraestrutura esteja disponível antes dos apps.
-
-### 1. Infraestrutura (este repositório)
+Ordem sugerida:
 
 ```bash
+# Infra base
 kubectl apply -f postgres/k8s/
 kubectl apply -f rabbitmq/k8s/
-```
+kubectl apply -f mongo/k8s/
+kubectl apply -f redis/k8s/
 
-Aguarde os pods ficarem prontos:
+# Observabilidade + Gateway
+kubectl apply -f prometheus/k8s/
+kubectl apply -f grafana/k8s/
+kubectl apply -f kong/k8s/
 
-```bash
-kubectl get pods -w
-```
-
-### 2. Workers e APIs (demais repositórios)
-
-```bash
-kubectl apply -f ../FCG.Notifications/k8s/
+# Apps
 kubectl apply -f ../FCG.Payments/k8s/
 kubectl apply -f ../FCG.Catalog/k8s/
 kubectl apply -f ../FCG.Users/k8s/
 ```
 
-> Aplique o **Notifications Worker antes do Users API**, pois o Users publica eventos consumidos por ele.
-
-### 3. Acesso aos serviços (NodePort)
+### NodePorts
 
 | Serviço | NodePort |
 |---|---|
-| Users API | `30001` |
-| Catalog API | `30002` |
-| PostgreSQL | `30432` |
-| RabbitMQ AMQP | `30672` |
+| Kong proxy | `30080` |
+| Kong admin | `30081` |
+| Prometheus | `30090` |
+| Grafana | `30300` |
 | RabbitMQ Management | `31672` |
+| PostgreSQL | `30432` |
+| MongoDB | `30017` |
 
-Exemplo com Minikube:
-
-```bash
-minikube service fcg-users-api --url
-minikube service fcg-catalog-api --url
-```
-
-Ou acesse diretamente pelo IP do node: `http://<node-ip>:30001/swagger`
-
-### 4. Variáveis de ambiente no Kubernetes
-
-Cada microsserviço define variáveis em `ConfigMap` (não sensíveis) e `Secret` (conexões e chaves). Detalhes por serviço:
-
-- [FCG.Users — variáveis](../FCG.Users/README.md)
-- [FCG.Catalog — variáveis](../FCG.Catalog/README.md)
-- [FCG.Payments — variáveis](../FCG.Payments/README.md)
-- [FCG.Notifications — variáveis](../FCG.Notifications/README.md)
-
-Em todos os ambientes containerizados, `ASPNETCORE_ENVIRONMENT=Production` — as configurações vêm dos manifests ou do `docker-compose.yml`.
-
-### 5. Comandos úteis
-
-```bash
-# Status geral
-kubectl get pods,services,deployments
-
-# Logs de um pod
-kubectl logs -f <nome-do-pod>
-
-# Reiniciar um deployment
-kubectl rollout restart deployment fcg-users-api
-
-# Remover tudo (infra + apps)
-kubectl delete -f ../FCG.Users/k8s/
-kubectl delete -f ../FCG.Catalog/k8s/
-kubectl delete -f ../FCG.Payments/k8s/
-kubectl delete -f ../FCG.Notifications/k8s/
-kubectl delete -f rabbitmq/k8s/
-kubectl delete -f postgres/k8s/
-```
+APIs Users/Catalog são **ClusterIP** (acesso via Kong).
 
 ---
+
+## Observabilidade (Opção A)
+
+- Users e Catalog expõem `/metrics` (prometheus-net)
+- Prometheus faz scrape das APIs
+- Grafana provisiona o dashboard **FCG APIs - Observability** (latência p95, request rate, erros 5xx, status codes)
 
 ## Estrutura do repositório
 
 ```
 FCG.Infra/
-├── docker-compose.yml          # Stack completa com imagens do Docker Hub
+├── docker-compose.yml
+├── kong/                 # API Gateway DB-less
+├── prometheus/
+├── grafana/
+├── mongo/
+├── redis/
 ├── postgres/
-│   ├── init/init.sql           # Criação dos bancos no primeiro start
-│   └── k8s/                    # Manifests PostgreSQL
-└── rabbitmq/
-    └── k8s/                    # Manifests RabbitMQ
+└── rabbitmq/             # + definitions das filas (incl. notifications)
 ```
 
-## Imagens Docker Hub
+## Checklist do vídeo (Fase 3)
 
-| Imagem | Descrição |
-|---|---|
-| `gabrielnatan2001/fcg-api-users` | API de usuários |
-| `gabrielnatan2001/fcg-api-catalog` | API de catálogo |
-| `gabrielnatan2001/fcg-worker-catalog` | Worker de pagamentos do catálogo |
-| `gabrielnatan2001/fcg-worker-payments` | Worker de pagamentos |
-| `gabrielnatan2001/fcg-worker-notifications` | Worker de notificações |
+1. Requisições via Kong (login público + catálogo com JWT)
+2. Azure Function acionada por mensagem + logs
+3. Dashboard Grafana com métricas em tempo real
+4. Avaliações no MongoDB (`POST/GET /catalog/api/Avaliacao`)
+5. Cache Redis nas listagens de jogos

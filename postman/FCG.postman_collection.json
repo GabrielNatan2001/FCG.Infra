@@ -1,0 +1,377 @@
+﻿{
+  "info": {
+    "name": "FCG - Docker Compose",
+    "description": "Collection para testar a stack FCG subida via `docker compose` em FCG.Infra.\n\n## Serviços (docker-compose.yml)\n| Serviço | URL host |\n|---|---|\n| Users API | {{usersBaseUrl}} |\n| Catalog API | {{catalogBaseUrl}} |\n| PostgreSQL | {{postgresHost}}:{{postgresPort}} |\n| RabbitMQ Management | {{rabbitmqManagementUrl}} ({{rabbitmqUser}}/{{rabbitmqPassword}}) |\n\nWorkers (Payments, Catalog, Notifications) não expõem porta HTTP — acompanhe via `docker compose logs -f`.\n\n## Fluxo recomendado\n1. Health checks\n2. Login admin → {{adminToken}}\n3. Criar usuário → UserCreatedEvent (Notifications)\n4. Login usuário → {{userToken}}\n5. Admin CRUD jogos\n6. Usuário compra jogo → OrderPlacedEvent → Payments → PaymentProcessedEvent → biblioteca + e-mail simulado\n7. Listar biblioteca\n\nSubir stack: `cd FCG.Infra && docker compose up -d`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Health (Docker Compose)",
+      "item": [
+        {
+          "name": "Users API - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usersBaseUrl}}/health",
+              "host": ["{{usersBaseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Container: fcg-users-api (porta 5001 → 8080)"
+          },
+          "response": []
+        },
+        {
+          "name": "Catalog API - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/health",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Container: fcg-catalog-api (porta 5002 → 8080)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Setup - Admin",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Possui accessToken', () => pm.expect(json.accessToken).to.be.a('string'));",
+                  "pm.environment.set('adminToken', json.accessToken);",
+                  "pm.collectionVariables.set('adminToken', json.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"senha\": \"{{adminSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{usersBaseUrl}}/api/auth/login",
+              "host": ["{{usersBaseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Seed: admin@admin.com / Teste@123"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Fluxo de cadastro de usuário",
+      "item": [
+        {
+          "name": "Criar Usuário (publica UserCreatedEvent)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = Date.now();",
+                  "pm.environment.set('userEmail', `user_${suffix}@fcg.com`);",
+                  "pm.environment.set('userSenha', 'Teste@123');",
+                  "pm.environment.set('userNome', `User ${suffix}`);",
+                  "pm.collectionVariables.set('userEmail', `user_${suffix}@fcg.com`);",
+                  "pm.collectionVariables.set('userSenha', 'Teste@123');",
+                  "pm.collectionVariables.set('userNome', `User ${suffix}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Retornou Id', () => pm.expect(json.id).to.be.a('string'));",
+                  "pm.environment.set('userId', json.id);",
+                  "pm.collectionVariables.set('userId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"{{userNome}}\",\n  \"email\": \"{{userEmail}}\",\n  \"senha\": \"{{userSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{usersBaseUrl}}/api/usuario",
+              "host": ["{{usersBaseUrl}}"],
+              "path": ["api", "usuario"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login do Usuário recém-criado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Possui accessToken', () => pm.expect(json.accessToken).to.be.a('string'));",
+                  "pm.environment.set('userToken', json.accessToken);",
+                  "pm.collectionVariables.set('userToken', json.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"senha\": \"{{userSenha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{usersBaseUrl}}/api/auth/login",
+              "host": ["{{usersBaseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Catálogo (Admin)",
+      "item": [
+        {
+          "name": "Listar Jogos (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/jogo",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "jogo"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Jogo (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Retornou Id', () => pm.expect(json.id).to.be.a('string'));",
+                  "pm.environment.set('jogoId', json.id);",
+                  "pm.collectionVariables.set('jogoId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Stellar Odyssey\",\n  \"descricao\": \"RPG espacial cooperativo.\",\n  \"preco\": 79.90,\n  \"categoria\": \"RPG\"\n}"
+            },
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/jogo",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "jogo"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Jogo (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Stellar Odyssey Deluxe\",\n  \"descricao\": \"RPG espacial cooperativo - edição completa.\",\n  \"preco\": 99.90,\n  \"categoria\": \"RPG\"\n}"
+            },
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/jogo/{{jogoId}}",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "jogo", "{{jogoId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Alterar Status Jogo (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/jogo/{{jogoId}}/status",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "jogo", "{{jogoId}}", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Catálogo (Usuário comum)",
+      "item": [
+        {
+          "name": "Listar Jogos Ativos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (Array.isArray(json) && json.length > 0) {",
+                  "  pm.environment.set('jogoId', json[0].id);",
+                  "  pm.collectionVariables.set('jogoId', json[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/jogo/ativos",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "jogo", "ativos"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Fluxo de compra (mensageria)",
+      "item": [
+        {
+          "name": "Comprar Jogo (publica OrderPlacedEvent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 202', () => pm.response.to.have.status(202));",
+                  "pm.test('Retornou orderId', () => pm.expect(json.orderId).to.be.a('string'));",
+                  "pm.environment.set('orderId', json.orderId);",
+                  "pm.collectionVariables.set('orderId', json.orderId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/biblioteca/{{jogoId}}/comprar",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "biblioteca", "{{jogoId}}", "comprar"]
+            },
+            "description": "Preço > 50 → Approved. Aguarde alguns segundos e liste a biblioteca.\nWorkers: fcg-payments-worker, fcg-catalog-worker, fcg-notifications-worker"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Biblioteca do Usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/biblioteca",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "biblioteca"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "usersBaseUrl", "value": "http://localhost:5001" },
+    { "key": "catalogBaseUrl", "value": "http://localhost:5002" },
+    { "key": "postgresHost", "value": "localhost" },
+    { "key": "postgresPort", "value": "5435" },
+    { "key": "rabbitmqManagementUrl", "value": "http://localhost:15672" },
+    { "key": "rabbitmqUser", "value": "admin" },
+    { "key": "rabbitmqPassword", "value": "admin" },
+    { "key": "adminEmail", "value": "admin@admin.com" },
+    { "key": "adminSenha", "value": "Teste@123" },
+    { "key": "adminToken", "value": "" },
+    { "key": "userToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "userEmail", "value": "" },
+    { "key": "userSenha", "value": "" },
+    { "key": "userNome", "value": "" },
+    { "key": "jogoId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ]
+}

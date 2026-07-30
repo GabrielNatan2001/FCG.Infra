@@ -1,0 +1,43 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcg-grafana
+  template:
+    metadata:
+      labels:
+        app: fcg-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: admin
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboard-json
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: datasources
+          configMap:
+            name: fcg-grafana-datasources
+        - name: dashboards-provider
+          configMap:
+            name: fcg-grafana-dashboards-provider
+        - name: dashboard-json
+          configMap:
+            name: fcg-grafana-dashboard-fcg-apis

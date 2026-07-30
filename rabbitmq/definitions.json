@@ -1,0 +1,19 @@
+﻿{
+  "exchanges": [
+    { "name": "fcg.user.created-exchange", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "fcg.order.placed-exchange", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "fcg.payment.processed-exchange", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} }
+  ],
+  "queues": [
+    { "name": "notifications.user-created-queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "notifications.payment-processed-queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "payments.order-placed-queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} },
+    { "name": "catalog.payment-processed-queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+  ],
+  "bindings": [
+    { "source": "fcg.user.created-exchange", "vhost": "/", "destination": "notifications.user-created-queue", "destination_type": "queue", "routing_key": "notifications.user-created", "arguments": {} },
+    { "source": "fcg.order.placed-exchange", "vhost": "/", "destination": "payments.order-placed-queue", "destination_type": "queue", "routing_key": "payments.order-placed", "arguments": {} },
+    { "source": "fcg.payment.processed-exchange", "vhost": "/", "destination": "catalog.payment-processed-queue", "destination_type": "queue", "routing_key": "catalog.payment-processed", "arguments": {} },
+    { "source": "fcg.payment.processed-exchange", "vhost": "/", "destination": "notifications.payment-processed-queue", "destination_type": "queue", "routing_key": "notifications.payment-processed", "arguments": {} }
+  ]
+}
