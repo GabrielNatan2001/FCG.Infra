@@ -42,6 +42,42 @@ services:
     ports:
       - "6379:6379"
 
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: fcg-loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - fcg-loki-data:/loki
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: fcg-tempo
+    command: ["-config.file=/etc/tempo/tempo-config.yml"]
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - fcg-tempo-data:/tmp/tempo
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: fcg-otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./otel-collector/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    depends_on:
+      - loki
+      - tempo
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: fcg-prometheus
@@ -68,6 +104,8 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
+      - loki
+      - tempo
     restart: unless-stopped
 
   kong:
@@ -130,8 +168,11 @@ services:
     restart: unless-stopped
 
   catalog-api:
+    build:
+      context: ../FCG.Catalog
+      dockerfile: Dockerfile
     image: gabrielnatan2001/fcg-api-catalog:latest
-    pull_policy: always
+    pull_policy: missing
     container_name: fcg-catalog-api
     expose:
       - "8080"
@@ -149,16 +190,23 @@ services:
       Jwt__Key: "rN8#kL2vQ9@xT5mP1!zC7$$dH4^bW6&yU"
       Jwt__Issuer: FCG.Users.API
       Jwt__Audience: FCG.Client
+      OTEL_SERVICE_NAME: fcg-catalog-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     depends_on:
       - postgres
       - rabbitmq
       - mongodb
       - redis
+      - otel-collector
     restart: unless-stopped
 
   users-api:
+    build:
+      context: ../FCG.Users
+      dockerfile: Dockerfile
     image: gabrielnatan2001/fcg-api-users:latest
-    pull_policy: always
+    pull_policy: missing
     container_name: fcg-users-api
     expose:
       - "8080"
@@ -172,12 +220,18 @@ services:
       Jwt__Key: "rN8#kL2vQ9@xT5mP1!zC7$$dH4^bW6&yU"
       Jwt__Issuer: FCG.Users.API
       Jwt__Audience: FCG.Client
+      OTEL_SERVICE_NAME: fcg-users-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     depends_on:
       - postgres
       - rabbitmq
+      - otel-collector
     restart: unless-stopped
 
 volumes:
   fcg-postgres-data:
   fcg-rabbitmq-data:
   fcg-mongodb-data:
+  fcg-loki-data:
+  fcg-tempo-data:
