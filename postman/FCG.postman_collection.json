@@ -1,7 +1,7 @@
 ﻿{
   "info": {
-    "name": "FCG - Docker Compose",
-    "description": "Collection para testar a stack FCG subida via `docker compose` em FCG.Infra.\n\n## Serviços (docker-compose.yml)\n| Serviço | URL host |\n|---|---|\n| Users API | {{usersBaseUrl}} |\n| Catalog API | {{catalogBaseUrl}} |\n| PostgreSQL | {{postgresHost}}:{{postgresPort}} |\n| RabbitMQ Management | {{rabbitmqManagementUrl}} ({{rabbitmqUser}}/{{rabbitmqPassword}}) |\n\nWorkers (Payments, Catalog, Notifications) não expõem porta HTTP — acompanhe via `docker compose logs -f`.\n\n## Fluxo recomendado\n1. Health checks\n2. Login admin → {{adminToken}}\n3. Criar usuário → UserCreatedEvent (Notifications)\n4. Login usuário → {{userToken}}\n5. Admin CRUD jogos\n6. Usuário compra jogo → OrderPlacedEvent → Payments → PaymentProcessedEvent → biblioteca + e-mail simulado\n7. Listar biblioteca\n\nSubir stack: `cd FCG.Infra && docker compose up -d`",
+    "name": "FCG - API Gateway",
+    "description": "Collection para testar a stack FCG pelo Kong Gateway, em {{gatewayBaseUrl}}.\n\nRotas públicas:\n- Users API: {{usersBaseUrl}}\n- Catalog API: {{catalogBaseUrl}}\n\nAs APIs não são acessadas diretamente pelo Postman. O Kong encaminha `/users/*` e `/catalog/*` aos respectivos serviços e valida o JWT nas rotas protegidas do catálogo.\n\nFluxo recomendado:\n1. Health checks\n2. Login admin → {{adminToken}}\n3. Criar usuário → UserCreatedEvent\n4. Login usuário → {{userToken}}\n5. Admin CRUD jogos\n6. Usuário compra jogo → OrderPlacedEvent → Payments → PaymentProcessedEvent → biblioteca + notificação\n7. Listar biblioteca\n\nSubir stack: `cd FCG.Infra && docker compose up -d --build`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -356,8 +356,9 @@
     }
   ],
   "variable": [
-    { "key": "usersBaseUrl", "value": "http://localhost:5001" },
-    { "key": "catalogBaseUrl", "value": "http://localhost:5002" },
+    { "key": "gatewayBaseUrl", "value": "http://localhost:8000" },
+    { "key": "usersBaseUrl", "value": "http://localhost:8000/users" },
+    { "key": "catalogBaseUrl", "value": "http://localhost:8000/catalog" },
     { "key": "postgresHost", "value": "localhost" },
     { "key": "postgresPort", "value": "5435" },
     { "key": "rabbitmqManagementUrl", "value": "http://localhost:15672" },

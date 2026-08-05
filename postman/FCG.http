@@ -1,0 +1,85 @@
+﻿### Alternativa em REST Client (.http) - JetBrains Rider, VS Code (REST Client), Visual Studio
+###
+### Variáveis: clique no botão "Send Request" acima de cada bloco.
+### As variáveis @adminToken, @userToken, @jogoId, @orderId devem ser copiadas
+### manualmente das respostas e coladas aqui (REST Client não tem auto-capture nativo).
+
+@usersBaseUrl = http://localhost:5001
+@catalogBaseUrl = http://localhost:5002
+
+@adminToken = COLE_AQUI_APOS_LOGIN_ADMIN
+@userToken = COLE_AQUI_APOS_LOGIN_USER
+@jogoId = COLE_AQUI_APOS_CRIAR_JOGO
+@orderId = COLE_AQUI_APOS_COMPRAR
+
+### 0.1 - Login Admin (seed: admin@admin.com / Teste@123)
+POST {{usersBaseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@admin.com",
+  "senha": "Teste@123"
+}
+
+### 1.1 - Criar Usuário (publica UserCreatedEvent → Notifications loga e-mail)
+POST {{usersBaseUrl}}/api/usuario
+Content-Type: application/json
+
+{
+  "nome": "Joao Silva",
+  "email": "joao@fcg.com",
+  "senha": "Teste@123"
+}
+
+### 1.2 - Login do usuário comum
+POST {{usersBaseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao@fcg.com",
+  "senha": "Teste@123"
+}
+
+### 2.1 - Listar Jogos (Admin)
+GET {{catalogBaseUrl}}/api/jogo
+Authorization: Bearer {{adminToken}}
+
+### 2.2 - Criar Jogo (Admin)
+POST {{catalogBaseUrl}}/api/jogo
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nome": "Stellar Odyssey",
+  "descricao": "RPG espacial cooperativo.",
+  "preco": 79.90,
+  "categoria": "RPG"
+}
+
+### 2.3 - Atualizar Jogo (Admin)
+PUT {{catalogBaseUrl}}/api/jogo/{{jogoId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nome": "Stellar Odyssey Deluxe",
+  "descricao": "RPG espacial cooperativo - edição completa.",
+  "preco": 99.90,
+  "categoria": "RPG"
+}
+
+### 2.4 - Alterar Status do Jogo (Admin)
+PATCH {{catalogBaseUrl}}/api/jogo/{{jogoId}}/status
+Authorization: Bearer {{adminToken}}
+
+### 3.1 - Listar Jogos Ativos (usuário comum)
+GET {{catalogBaseUrl}}/api/jogo/ativos
+Authorization: Bearer {{userToken}}
+
+### 4.1 - Comprar Jogo (publica OrderPlacedEvent → dispara cadeia de eventos)
+POST {{catalogBaseUrl}}/api/biblioteca/{{jogoId}}/comprar
+Authorization: Bearer {{userToken}}
+
+### 4.2 - Listar Biblioteca (após mensageria processar, jogo deve aparecer)
+GET {{catalogBaseUrl}}/api/biblioteca
+Authorization: Bearer {{userToken}}
