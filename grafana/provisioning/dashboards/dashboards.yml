@@ -6,6 +6,8 @@ providers:
     folder: FCG
     type: file
     disableDeletion: false
-    updateIntervalSeconds: 30
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
     options:
       path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false
