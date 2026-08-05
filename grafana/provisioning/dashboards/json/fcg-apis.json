@@ -14,6 +14,17 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "reqps"
         },
         "overrides": []
@@ -25,14 +36,27 @@
         "y": 0
       },
       "id": 1,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "sum(rate(http_requests_received_total[1m])) by (job)",
           "legendFormat": "{{job}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -46,6 +70,17 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "s"
         },
         "overrides": []
@@ -57,14 +92,27 @@
         "y": 0
       },
       "id": 2,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))",
           "legendFormat": "p95 {{job}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -78,6 +126,17 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "reqps"
         },
         "overrides": []
@@ -89,14 +148,27 @@
         "y": 0
       },
       "id": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "sum(rate(http_requests_received_total{code=~\"5..\"}[1m])) by (job)",
           "legendFormat": "5xx {{job}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -109,7 +181,19 @@
         "uid": "prometheus"
       },
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          }
+        },
         "overrides": []
       },
       "gridPos": {
@@ -119,14 +203,27 @@
         "y": 8
       },
       "id": 4,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "sum(rate(http_requests_received_total[1m])) by (code, job)",
           "legendFormat": "{{job}} {{code}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -136,7 +233,10 @@
   ],
   "refresh": "10s",
   "schemaVersion": 39,
-  "tags": ["fcg", "fase3"],
+  "tags": [
+    "fcg",
+    "fase3"
+  ],
   "templating": {
     "list": []
   },
@@ -144,6 +244,7 @@
     "from": "now-15m",
     "to": "now"
   },
+  "timepicker": {},
   "timezone": "browser",
   "title": "FCG APIs - Observability",
   "uid": "fcg-apis",
