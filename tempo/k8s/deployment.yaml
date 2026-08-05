@@ -23,9 +23,9 @@ data:
       trace:
         backend: local
         wal:
-          path: /tmp/tempo/wal
+          path: /var/tempo/wal
         local:
-          path: /tmp/tempo/blocks
+          path: /var/tempo/blocks
     overrides:
       defaults:
         metrics_generator:
@@ -45,6 +45,10 @@ spec:
       labels:
         app: fcg-tempo
     spec:
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       containers:
         - name: tempo
           image: grafana/tempo:2.5.0
@@ -56,10 +60,14 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/tempo
+            - name: data
+              mountPath: /var/tempo
       volumes:
         - name: config
           configMap:
             name: fcg-tempo-config
+        - name: data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
