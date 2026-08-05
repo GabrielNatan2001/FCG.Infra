@@ -4,9 +4,19 @@ metadata:
   name: fcg-rabbitmq-config
 data:
   rabbitmq.conf: |
-    management.load_definitions = /etc/rabbitmq/definitions.json
+    definitions.import_backend = local_filesystem
+    definitions.local.path = /etc/rabbitmq/definitions.json
   definitions.json: |
     {
+      "vhosts": [
+        { "name": "/" }
+      ],
+      "users": [
+        { "name": "admin", "password": "admin", "tags": ["administrator"] }
+      ],
+      "permissions": [
+        { "user": "admin", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+      ],
       "exchanges": [
         { "name": "fcg.user.created-exchange", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
         { "name": "fcg.order.placed-exchange", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
