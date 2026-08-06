@@ -7,7 +7,7 @@ Repositório de **orquestração** da plataforma FCG (Tech Challenge — Fase 3)
 | Capacidade | Escolha |
 |---|---|
 | API Gateway | **Kong** (DB-less) — ponto de entrada único + validação JWT no catálogo |
-| Observabilidade | **Prometheus + Grafana + Loki + Tempo** (métricas, logs e traces via OTLP) |
+| Observabilidade | **Opção A** — Prometheus + Grafana |
 | NoSQL | **MongoDB** — avaliações de jogos no Catalog |
 | Cache | **Redis** — listagens de jogos |
 | Serverless | **Azure Functions** — projeto em [`FCG.Notifications/src/FCG.Notifications.Function`](../FCG.Notifications/src/FCG.Notifications.Function) |
@@ -41,13 +41,7 @@ flowchart LR
   RMQ -->|trigger| AzFunc[Notifications Function]
   Users --> Prom[Prometheus]
   Catalog --> Prom
-  Users --> Otel[OTel Collector]
-  Catalog --> Otel
-  Otel --> Tempo[Tempo]
-  Otel --> Loki[Loki]
   Prom --> Grafana[Grafana]
-  Tempo --> Grafana
-  Loki --> Grafana
 ```
 
 ## Pré-requisitos
@@ -73,9 +67,6 @@ docker compose up -d
 | Kong Admin | http://localhost:8001 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 (`admin`/`admin`) |
-| Loki | http://localhost:3100 |
-| Tempo | http://localhost:3200 |
-| OTel Collector (OTLP) | `localhost:4317` (gRPC) / `localhost:4318` (HTTP) |
 | RabbitMQ Management | http://localhost:15672 (`admin`/`admin`) |
 | PostgreSQL | `localhost:5435` |
 | MongoDB | `localhost:27017` |
@@ -155,18 +146,11 @@ APIs Users/Catalog são **ClusterIP** (acesso via Kong).
 
 ---
 
-## Observabilidade
+## Observabilidade (Opção A)
 
-- **Métricas**: Users e Catalog expõem `/metrics` (prometheus-net) → Prometheus → Grafana
-- **Traces**: OpenTelemetry (ASP.NET Core + HttpClient) → OTel Collector → Tempo
-- **Logs**: OpenTelemetry Logging → OTel Collector → Loki
-- Grafana já provisiona datasources **Prometheus**, **Loki** e **Tempo**, com correlação Trace ↔ Log
-- Dashboard: **FCG APIs - Observability** (latência p95, request rate, erros 5xx)
-
-No Grafana:
-1. **Explore → Loki** — `{service_name="fcg-users-api"}` ou `{service_name="fcg-catalog-api"}`
-2. **Explore → Tempo** — Search por service name após gerar tráfego no Postman
-3. No Tempo, use **Logs for this span** para ir ao Loki
+- Users e Catalog expõem `/metrics` (prometheus-net)
+- Prometheus faz scrape das APIs
+- Grafana provisiona o dashboard **FCG APIs - Observability** (latência p95, request rate, erros 5xx, status codes)
 
 ## Estrutura do repositório
 
@@ -176,9 +160,6 @@ FCG.Infra/
 ├── kong/                 # API Gateway DB-less
 ├── prometheus/
 ├── grafana/
-├── loki/
-├── tempo/
-├── otel-collector/
 ├── mongo/
 ├── redis/
 ├── postgres/
@@ -189,6 +170,6 @@ FCG.Infra/
 
 1. Requisições via Kong (login público + catálogo com JWT)
 2. Azure Function acionada por mensagem + logs
-3. Dashboard Grafana com métricas + Explore Loki/Tempo
+3. Dashboard Grafana com métricas em tempo real
 4. Avaliações no MongoDB (`POST/GET /catalog/api/Avaliacao`)
 5. Cache Redis nas listagens de jogos
