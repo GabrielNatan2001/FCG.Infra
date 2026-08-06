@@ -53,15 +53,6 @@ services:
       - fcg-loki-data:/loki
     restart: unless-stopped
 
-  # O Tempo roda como uid 10001 e o volume nomeado nasce pertencendo ao root.
-  tempo-init:
-    image: grafana/tempo:2.5.0
-    container_name: fcg-tempo-init
-    user: root
-    entrypoint: ["chown", "-R", "10001:10001", "/var/tempo"]
-    volumes:
-      - fcg-tempo-data:/var/tempo
-
   tempo:
     image: grafana/tempo:2.5.0
     container_name: fcg-tempo
@@ -70,10 +61,7 @@ services:
       - "3200:3200"
     volumes:
       - ./tempo/tempo-config.yml:/etc/tempo/tempo-config.yml:ro
-      - fcg-tempo-data:/var/tempo
-    depends_on:
-      tempo-init:
-        condition: service_completed_successfully
+      - fcg-tempo-data:/tmp/tempo
     restart: unless-stopped
 
   otel-collector:
