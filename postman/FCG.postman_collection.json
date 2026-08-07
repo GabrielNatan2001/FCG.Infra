@@ -1,7 +1,7 @@
 ﻿{
   "info": {
     "name": "FCG - API Gateway",
-    "description": "Collection para testar a stack FCG pelo Kong Gateway, em {{gatewayBaseUrl}}.\n\nRotas públicas:\n- Users API: {{usersBaseUrl}}\n- Catalog API: {{catalogBaseUrl}}\n\nAs APIs não são acessadas diretamente pelo Postman. O Kong encaminha `/users/*` e `/catalog/*` aos respectivos serviços e valida o JWT nas rotas protegidas do catálogo.\n\nFluxo recomendado:\n1. Health checks\n2. Login admin → {{adminToken}}\n3. Criar usuário → UserCreatedEvent\n4. Login usuário → {{userToken}}\n5. Admin CRUD jogos\n6. Usuário compra jogo → OrderPlacedEvent → Payments → PaymentProcessedEvent → biblioteca + notificação\n7. Listar biblioteca\n\nSubir stack: `cd FCG.Infra && docker compose up -d --build`",
+    "description": "Collection para testar a stack FCG pelo Kong Gateway, em {{gatewayBaseUrl}}.\n\nRotas públicas:\n- Users API: {{usersBaseUrl}}\n- Catalog API: {{catalogBaseUrl}}\n\nAs APIs não são acessadas diretamente pelo Postman. O Kong encaminha `/users/*` e `/catalog/*` aos respectivos serviços e valida o JWT nas rotas protegidas do catálogo.\n\nFluxo recomendado:\n1. Health checks\n2. Login admin → {{adminToken}}\n3. Criar usuário → UserCreatedEvent\n4. Login usuário → {{userToken}}\n5. Admin CRUD jogos\n6. Usuário compra jogo → OrderPlacedEvent → Payments → PaymentProcessedEvent → biblioteca + notificação\n7. Listar biblioteca\n8. Criar/listar avaliação (MongoDB)\n\nSubir stack: `cd FCG.Infra && docker compose up -d`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -353,6 +353,75 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "6. Avaliações (MongoDB)",
+      "item": [
+        {
+          "name": "Criar Avaliação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Retornou id', () => pm.expect(json.id).to.be.a('string'));",
+                  "pm.environment.set('avaliacaoId', json.id);",
+                  "pm.collectionVariables.set('avaliacaoId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": \"{{jogoId}}\",\n  \"nota\": 5,\n  \"comentario\": \"Jogo excelente, recomendo!\"\n}"
+            },
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/avaliacao",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "avaliacao"]
+            },
+            "description": "Persiste avaliação no MongoDB. Requer JWT do usuário. Nota de 1 a 5."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Avaliações por Jogo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Retornou array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "url": {
+              "raw": "{{catalogBaseUrl}}/api/avaliacao/jogo/{{jogoId}}",
+              "host": ["{{catalogBaseUrl}}"],
+              "path": ["api", "avaliacao", "jogo", "{{jogoId}}"]
+            },
+            "description": "Lista avaliações do jogo no MongoDB."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -373,6 +442,7 @@
     { "key": "userSenha", "value": "" },
     { "key": "userNome", "value": "" },
     { "key": "jogoId", "value": "" },
-    { "key": "orderId", "value": "" }
+    { "key": "orderId", "value": "" },
+    { "key": "avaliacaoId", "value": "" }
   ]
 }

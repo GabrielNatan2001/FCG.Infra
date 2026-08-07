@@ -4,13 +4,14 @@
 ### As variáveis @adminToken, @userToken, @jogoId, @orderId devem ser copiadas
 ### manualmente das respostas e coladas aqui (REST Client não tem auto-capture nativo).
 
-@usersBaseUrl = http://localhost:5001
-@catalogBaseUrl = http://localhost:5002
+@usersBaseUrl = http://localhost:8000/users
+@catalogBaseUrl = http://localhost:8000/catalog
 
 @adminToken = COLE_AQUI_APOS_LOGIN_ADMIN
 @userToken = COLE_AQUI_APOS_LOGIN_USER
 @jogoId = COLE_AQUI_APOS_CRIAR_JOGO
 @orderId = COLE_AQUI_APOS_COMPRAR
+@avaliacaoId = COLE_AQUI_APOS_CRIAR_AVALIACAO
 
 ### 0.1 - Login Admin (seed: admin@admin.com / Teste@123)
 POST {{usersBaseUrl}}/api/auth/login
@@ -82,4 +83,19 @@ Authorization: Bearer {{userToken}}
 
 ### 4.2 - Listar Biblioteca (após mensageria processar, jogo deve aparecer)
 GET {{catalogBaseUrl}}/api/biblioteca
+Authorization: Bearer {{userToken}}
+
+### 5.1 - Criar Avaliação (MongoDB)
+POST {{catalogBaseUrl}}/api/avaliacao
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "jogoId": "{{jogoId}}",
+  "nota": 5,
+  "comentario": "Jogo excelente, recomendo!"
+}
+
+### 5.2 - Listar Avaliações por Jogo (MongoDB)
+GET {{catalogBaseUrl}}/api/avaliacao/jogo/{{jogoId}}
 Authorization: Bearer {{userToken}}
