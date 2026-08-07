@@ -1,0 +1,54 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-konga
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcg-konga
+  template:
+    metadata:
+      labels:
+        app: fcg-konga
+    spec:
+      initContainers:
+        - name: konga-prepare
+          image: pantsel/konga:0.14.9
+          command: ["-c", "prepare", "-a", "postgres", "-u", "postgresql://postgres:postgres@fcg-postgres:5432/konga"]
+      containers:
+        - name: konga
+          image: pantsel/konga:0.14.9
+          ports:
+            - containerPort: 1337
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: TOKEN_SECRET
+              value: fcg-konga-dev-secret
+            - name: DB_ADAPTER
+              value: postgres
+            - name: DB_HOST
+              value: fcg-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              value: postgres
+            - name: DB_DATABASE
+              value: konga
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fcg-konga
+spec:
+  selector:
+    app: fcg-konga
+  ports:
+    - name: http
+      port: 1337
+      targetPort: 1337
+      nodePort: 31337
+  type: NodePort

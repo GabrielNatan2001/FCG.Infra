@@ -1,4 +1,4 @@
-apiVersion: v1
+﻿apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fcg-postgres-init-script
@@ -8,3 +8,4 @@ data:
     CREATE DATABASE fcg_users;
     CREATE DATABASE fcg_catalog;
     CREATE DATABASE fcg_payments;
+    CREATE DATABASE konga;

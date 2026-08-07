@@ -64,7 +64,8 @@ docker compose up -d
 | Serviço | URL |
 |---|---|
 | **Kong (entrada da API)** | http://localhost:8000 |
-| Kong Admin | http://localhost:8001 |
+| Kong Admin API | http://localhost:8001 |
+| **Konga (UI do Kong)** | http://localhost:1337 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 (`admin`/`admin`) |
 | RabbitMQ Management | http://localhost:15672 (`admin`/`admin`) |
@@ -73,6 +74,25 @@ docker compose up -d
 | Redis | `localhost:6379` |
 
 > Users e Catalog **não** publicam portas no host — o acesso externo é só via Kong.
+
+### Konga (interface visual)
+
+1. Abra http://localhost:1337 e crie o usuário admin no primeiro acesso.
+2. Em **Connections** → **New Connection**:
+   - Name: `FCG Kong`
+   - Kong Admin URL: `http://kong:8001` (hostname do serviço no Compose; **não** use `localhost`)
+3. Ative a conexão e navegue em Services, Routes, Plugins e Consumers.
+
+> O Kong está em **DB-less**: o Konga serve para **visualizar** vínculos. Criar/editar pela UI tende a retornar `405`. Mudanças permanentes ficam em `kong/kong.yml`.
+
+No Kubernetes, a URL da conexão no Konga deve ser `http://fcg-kong:8001` (Service do cluster). UI em NodePort `31337`.
+
+Se o Postgres já existia antes desta alteração, crie o database do Konga uma vez:
+
+```bash
+docker exec -it fcg-postgres psql -U postgres -c "CREATE DATABASE konga;"
+docker compose up -d konga-prepare konga
+```
 
 ### Rotas do Gateway
 
@@ -136,6 +156,7 @@ kubectl apply -f ../FCG.Users/k8s/
 |---|---|
 | Kong proxy | `30080` |
 | Kong admin | `30081` |
+| Konga UI | `31337` |
 | Prometheus | `30090` |
 | Grafana | `30300` |
 | RabbitMQ Management | `31672` |
