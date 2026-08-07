@@ -84,14 +84,13 @@ docker compose up -d
 3. Ative a conexão e navegue em Services, Routes, Plugins e Consumers.
 
 > O Kong está em **DB-less**: o Konga serve para **visualizar** vínculos. Criar/editar pela UI tende a retornar `405`. Mudanças permanentes ficam em `kong/kong.yml`.
+>
+> O Konga roda em modo `development` (disco local), porque o driver dele não suporta SCRAM do Postgres 14+.
 
 No Kubernetes, a URL da conexão no Konga deve ser `http://fcg-kong:8001` (Service do cluster). UI em NodePort `31337`.
 
-Se o Postgres já existia antes desta alteração, crie o database do Konga uma vez:
-
 ```bash
-docker exec -it fcg-postgres psql -U postgres -c "CREATE DATABASE konga;"
-docker compose up -d konga-prepare konga
+docker compose up -d konga
 ```
 
 ### Rotas do Gateway

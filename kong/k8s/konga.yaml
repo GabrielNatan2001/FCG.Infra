@@ -12,32 +12,23 @@ spec:
       labels:
         app: fcg-konga
     spec:
-      initContainers:
-        - name: konga-prepare
-          image: pantsel/konga:0.14.9
-          command: ["-c", "prepare", "-a", "postgres", "-u", "postgresql://postgres:postgres@fcg-postgres:5432/konga"]
       containers:
         - name: konga
           image: pantsel/konga:0.14.9
           ports:
             - containerPort: 1337
           env:
+            # Development + emptyDir: evita SCRAM do Postgres 14+ (Konga usa pg antigo).
             - name: NODE_ENV
-              value: production
+              value: development
             - name: TOKEN_SECRET
               value: fcg-konga-dev-secret
-            - name: DB_ADAPTER
-              value: postgres
-            - name: DB_HOST
-              value: fcg-postgres
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_USER
-              value: postgres
-            - name: DB_PASSWORD
-              value: postgres
-            - name: DB_DATABASE
-              value: konga
+          volumeMounts:
+            - name: konga-data
+              mountPath: /app/kongadata
+      volumes:
+        - name: konga-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

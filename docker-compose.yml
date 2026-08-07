@@ -92,16 +92,8 @@ services:
       - catalog-api
     restart: unless-stopped
 
-  # Prepara o schema do Konga no Postgres (roda uma vez e sai).
-  konga-prepare:
-    image: pantsel/konga:0.14.9
-    container_name: fcg-konga-prepare
-    command: ["-c", "prepare", "-a", "postgres", "-u", "postgresql://postgres:postgres@postgres:5432/konga"]
-    depends_on:
-      - postgres
-    restart: on-failure
-
   # UI visual do Kong Admin API (http://localhost:1337).
+  # Development + disco local: o driver do Konga não suporta SCRAM do Postgres 14+.
   # Em DB-less o Konga é principalmente leitura; alterações permanentes ficam no kong.yml.
   konga:
     image: pantsel/konga:0.14.9
@@ -109,19 +101,12 @@ services:
     ports:
       - "1337:1337"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       TOKEN_SECRET: fcg-konga-dev-secret
-      DB_ADAPTER: postgres
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_DATABASE: konga
+    volumes:
+      - fcg-konga-data:/app/kongadata
     depends_on:
-      konga-prepare:
-        condition: service_completed_successfully
-      kong:
-        condition: service_started
+      - kong
     restart: unless-stopped
 
   payments-worker:
@@ -213,3 +198,4 @@ volumes:
   fcg-postgres-data:
   fcg-rabbitmq-data:
   fcg-mongodb-data:
+  fcg-konga-data:
