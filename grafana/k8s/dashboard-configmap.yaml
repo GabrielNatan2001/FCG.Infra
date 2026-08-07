@@ -31,8 +31,8 @@ data:
           "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
           "id": 3,
-          "targets": [{ "expr": "sum(rate(http_requests_received_total{code=~\"5..\"}[1m])) by (job)", "legendFormat": "5xx {{job}}" }],
-          "title": "Error rate (5xx)",
+          "targets": [{ "expr": "sum(rate(http_requests_received_total{code=~\"4..|5..\"}[1m])) by (job, code)", "legendFormat": "{{job}} {{code}}" }],
+          "title": "Error rate (4xx/5xx)",
           "type": "timeseries"
         },
         {

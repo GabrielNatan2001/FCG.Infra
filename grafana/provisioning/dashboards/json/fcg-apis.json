@@ -166,13 +166,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_received_total{code=~\"5..\"}[1m])) by (job)",
-          "legendFormat": "5xx {{job}}",
+          "expr": "sum(rate(http_requests_received_total{code=~\"4..|5..\"}[1m])) by (job, code)",
+          "legendFormat": "{{job}} {{code}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Error rate (5xx)",
+      "title": "Error rate (4xx/5xx)",
       "type": "timeseries"
     },
     {
