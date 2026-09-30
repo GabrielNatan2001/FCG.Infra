@@ -20,12 +20,22 @@ spec:
           env:
             - name: discovery.type
               value: single-node
-            - name: plugins.security.disabled
-              value: "true"
             - name: DISABLE_INSTALL_DEMO_CONFIG
               value: "true"
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: bootstrap.memory_lock
+              value: "false"
             - name: OPENSEARCH_JAVA_OPTS
-              value: -Xms512m -Xmx512m
+              # Heap reduzido para caber em AKS 1 node (D2s_v4 / ~8 GB)
+              value: -Xms256m -Xmx256m
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: "1"
           volumeMounts:
             - name: fcg-opensearch-data
               mountPath: /usr/share/opensearch/data

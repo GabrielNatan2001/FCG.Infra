@@ -35,6 +35,10 @@ spec:
                   name: fcg-postgres-secret
                   key: POSTGRES_PASSWORD
 
+            # Azure disks têm lost+found na raiz do volume; Postgres precisa de um subdiretório
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+
           volumeMounts:
             - name: fcg-postgres-data
               mountPath: /var/lib/postgresql/data

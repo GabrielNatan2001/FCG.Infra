@@ -3,15 +3,13 @@ kind: Service
 metadata:
   name: fcg-kong
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: fcg-kong
   ports:
     - name: proxy
-      port: 8000
+      port: 80
       targetPort: 8000
-      nodePort: 30080
     - name: admin
       port: 8001
       targetPort: 8001
-      nodePort: 30081

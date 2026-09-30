@@ -1,0 +1,12 @@
+# Secrets locais (nunca versionar)
+**/k8s/secret.local.yaml
+**/k8s/*-secret.local.yaml
+**/k8s/secret.yaml
+**/k8s/*-secret.yaml
+!**/k8s/*.example.yaml
+
+# Kubernetes secrets locais
+**/k8s/secret.yaml
+**/k8s/*-secret.yaml
+**/k8s/secret.local.yaml
+**/k8s/*-secret.local.yaml

@@ -51,6 +51,7 @@ flowchart LR
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose v2+)
 - Para Kubernetes: Minikube/Kind ou cluster com `kubectl`
 - Para Notifications local: [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) v4
+- **Fase 4 (Azure AKS + ACR + CI/CD):** guia completo em [`FASE4_AZURE_PASSO_A_PASSO.md`](./FASE4_AZURE_PASSO_A_PASSO.md)
 
 ---
 

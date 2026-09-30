@@ -2,19 +2,18 @@
 kind: Service
 metadata:
   name: fcg-rabbitmq
-
+  labels:
+    app: fcg-rabbitmq
 spec:
-  type: NodePort
+  # LoadBalancer para a Azure Function (fora do cluster) alcançar o AMQP.
+  # ATENÇÃO: exposição pública só para demo do TC — apague o RG depois.
+  type: LoadBalancer
   selector:
     app: fcg-rabbitmq
-
   ports:
     - name: amqp
       port: 5672
       targetPort: 5672
-      nodePort: 30672
-
     - name: management
       port: 15672
       targetPort: 15672
-      nodePort: 31672
