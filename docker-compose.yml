@@ -42,6 +42,26 @@ services:
     ports:
       - "6379:6379"
 
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    container_name: fcg-opensearch
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - fcg-opensearch-data:/usr/share/opensearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: fcg-prometheus
@@ -157,7 +177,9 @@ services:
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=fcg_catalog;Username=postgres;Password=postgres
       ConnectionStrings__MongoDB: mongodb://mongodb:27017
       ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__OpenSearch: http://opensearch:9200
       MongoDB__Database: fcg_catalog
+      OpenSearch__Index: jogos
       Cache__JogosTtlSeconds: "60"
       MessageBusConfigs__Host: amqp://admin:admin@rabbitmq:5672/
       MessageBusConfigs__RetryCount: "5"
@@ -171,6 +193,7 @@ services:
       - rabbitmq
       - mongodb
       - redis
+      - opensearch
     restart: unless-stopped
 
   users-api:
@@ -198,4 +221,5 @@ volumes:
   fcg-postgres-data:
   fcg-rabbitmq-data:
   fcg-mongodb-data:
+  fcg-opensearch-data:
   fcg-konga-data:

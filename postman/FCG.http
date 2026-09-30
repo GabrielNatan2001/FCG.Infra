@@ -77,6 +77,14 @@ Authorization: Bearer {{adminToken}}
 GET {{catalogBaseUrl}}/api/jogo/ativos
 Authorization: Bearer {{userToken}}
 
+### 3.2 - Busca avançada (Fuzzy Search + relevância via OpenSearch)
+GET {{catalogBaseUrl}}/api/Search?q=cybr
+Authorization: Bearer {{userToken}}
+
+### 3.3 - Busca avançada (alias /search)
+GET {{catalogBaseUrl}}/search?q=odyss
+Authorization: Bearer {{userToken}}
+
 ### 4.1 - Comprar Jogo (publica OrderPlacedEvent → dispara cadeia de eventos)
 POST {{catalogBaseUrl}}/api/biblioteca/{{jogoId}}/comprar
 Authorization: Bearer {{userToken}}

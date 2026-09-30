@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fcg-opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fcg-opensearch
+  template:
+    metadata:
+      labels:
+        app: fcg-opensearch
+    spec:
+      containers:
+        - name: fcg-opensearch
+          image: opensearchproject/opensearch:2.17.1
+          ports:
+            - containerPort: 9200
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: plugins.security.disabled
+              value: "true"
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: "true"
+            - name: OPENSEARCH_JAVA_OPTS
+              value: -Xms512m -Xmx512m
+          volumeMounts:
+            - name: fcg-opensearch-data
+              mountPath: /usr/share/opensearch/data
+      volumes:
+        - name: fcg-opensearch-data
+          emptyDir: {}

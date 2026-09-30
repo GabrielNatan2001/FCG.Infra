@@ -10,6 +10,7 @@ Repositório de **orquestração** da plataforma FCG (Tech Challenge — Fase 3)
 | Observabilidade | **Opção A** — Prometheus + Grafana |
 | NoSQL | **MongoDB** — avaliações de jogos no Catalog |
 | Cache | **Redis** — listagens de jogos |
+| Busca avançada | **OpenSearch** — Fuzzy Search + relevância (`/search`) |
 | Serverless | **Azure Functions** — projeto em [`FCG.Notifications/src/FCG.Notifications.Function`](../FCG.Notifications/src/FCG.Notifications.Function) |
 | Relacional | PostgreSQL |
 | Mensageria | RabbitMQ |
@@ -34,6 +35,7 @@ flowchart LR
   Catalog --> PG
   Catalog --> Mongo[(MongoDB)]
   Catalog --> Redis[(Redis)]
+  Catalog --> OS[(OpenSearch)]
   Users -->|events| RMQ[(RabbitMQ)]
   Catalog -->|events| RMQ
   RMQ --> Payments[Payments Worker]
@@ -72,6 +74,7 @@ docker compose up -d
 | PostgreSQL | `localhost:5435` |
 | MongoDB | `localhost:27017` |
 | Redis | `localhost:6379` |
+| OpenSearch | `localhost:9200` |
 
 > Users e Catalog **não** publicam portas no host — o acesso externo é só via Kong.
 
@@ -100,6 +103,8 @@ docker compose up -d konga
 | POST | `http://localhost:8000/users/api/Auth/login` | Users (público) |
 | POST | `http://localhost:8000/users/api/Usuario` | Users (público) |
 | * | `http://localhost:8000/catalog/api/...` | Catalog (**JWT obrigatório** no Kong) |
+| GET | `http://localhost:8000/catalog/api/Search?q=termo` | Busca fuzzy + relevância |
+| GET | `http://localhost:8000/catalog/search?q=termo` | Alias da busca |
 | GET | `http://localhost:8000/users/health` | Users health |
 | GET | `http://localhost:8000/catalog/health` | Catalog health |
 
@@ -137,6 +142,7 @@ kubectl apply -f postgres/k8s/
 kubectl apply -f rabbitmq/k8s/
 kubectl apply -f mongo/k8s/
 kubectl apply -f redis/k8s/
+kubectl apply -f opensearch/k8s/
 
 # Observabilidade + Gateway
 kubectl apply -f prometheus/k8s/
@@ -161,6 +167,7 @@ kubectl apply -f ../FCG.Users/k8s/
 | RabbitMQ Management | `31672` |
 | PostgreSQL | `30432` |
 | MongoDB | `30017` |
+| OpenSearch | `30920` |
 
 APIs Users/Catalog são **ClusterIP** (acesso via Kong).
 
@@ -182,14 +189,16 @@ FCG.Infra/
 ├── grafana/
 ├── mongo/
 ├── redis/
+├── opensearch/
 ├── postgres/
 └── rabbitmq/             # + definitions das filas (incl. notifications)
 ```
 
-## Checklist do vídeo (Fase 3)
+## Checklist do vídeo (Fase 3 + busca Fase 4)
 
 1. Requisições via Kong (login público + catálogo com JWT)
 2. Azure Function acionada por mensagem + logs
 3. Dashboard Grafana com métricas em tempo real
 4. Avaliações no MongoDB (`POST/GET /catalog/api/Avaliacao`)
 5. Cache Redis nas listagens de jogos
+6. Busca OpenSearch com fuzzy (`GET /catalog/api/Search?q=cybr`)
